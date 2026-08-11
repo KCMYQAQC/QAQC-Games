@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Operations Team Games</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #0f0f23;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header { text-align: center; padding: 30px 20px 10px; }
+
+    header h1 {
+      font-size: 2.2rem;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p { color: #888; margin-top: 6px; }
+
+    nav { display: flex; gap: 10px; margin: 20px 0; flex-wrap: wrap; justify-content: center; }
+
+    nav button {
+      padding: 10px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-weight: 600;
+    }
+
+    nav button:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+
+    .btn-home { background: linear-gradient(135deg, #ff6b35, #c44d25); color: #fff; }
+    .btn-play { background: linear-gradient(135deg, #00d4ff, #0090b3); color: #fff; }
+    .btn-leaderboard { background: linear-gradient(135deg, #7b2ff7, #5a1fb3); color: #fff; }
+    .btn-export { background: linear-gradient(135deg, #00c853, #009624); color: #fff; }
+    .btn-submit { background: linear-gradient(135deg, #ff6b35, #c44d25); color: #fff; }
+    .btn-clear { background: #333; color: #ccc; }
+
+    .screen { display: none; width: 100%; max-width: 700px; padding: 0 20px 40px; }
+    .screen.active { display: block; }
+
+    /* HOME */
+    .game-cards { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+
+    .game-card {
+      background: #1a1a2e;
+      border: 2px solid #333;
+      border-radius: 16px;
+      padding: 30px;
+      width: 260px;
+      cursor: pointer;
+      transition: transform 0.2s, border-color 0.2s;
+      text-align: center;
+    }
+
+    .game-card:hover { transform: translateY(-4px); border-color: #00d4ff; }
+
+    .game-card .icon { font-size: 3rem; margin-bottom: 12px; }
+    .game-card h3 { font-size: 1.3rem; margin-bottom: 8px; color: #00d4ff; }
+    .game-card p { color: #888; font-size: 0.9rem; }
+
+    /* GAME AREA */
+    .input-group { display: flex; gap: 10px; margin-bottom: 20px; justify-content: center; }
+
+    .input-group input, .input-group select {
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 1rem;
+    }
+
+    .input-group input { width: 220px; }
+    .input-group input:focus, .input-group select:focus { outline: none; border-color: #00d4ff; }
+
+    #reaction-area {
+      width: 100%;
+      height: 350px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s;
+      margin-bottom: 20px;
+    }
+
+    #reaction-area.waiting { background: #1a1a2e; border: 2px solid #333; }
+    #reaction-area.ready   { background: #b71c1c; border: 2px solid #e53935; }
+    #reaction-area.go      { background: #1b5e20; border: 2px solid #43a047; }
+    #reaction-area.result  { background: #1a1a2e; border: 2px solid #444; }
+
+    #reaction-area h2 { font-size: 1.8rem; margin-bottom: 8px; }
+    #reaction-area p  { font-size: 1.1rem; color: #aaa; }
+
+    #result-time {
+      font-size: 3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* MEMORY GAME */
+    #memory-info {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .info-badge {
+      background: #1a1a2e;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+    }
+
+    .info-badge span { color: #00d4ff; font-weight: 700; }
+
+    #memory-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      max-width: 450px;
+      margin: 0 auto 20px;
+    }
+
+    .card {
+      aspect-ratio: 1;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      user-select: none;
+      transition: transform 0.3s;
+      position: relative;
+    }
+
+    .card .card-inner {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backface-visibility: hidden;
+      transition: transform 0.4s;
+      transform-style: preserve-3d;
+      position: absolute;
+    }
+
+    .card .card-front, .card .card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backface-visibility: hidden;
+    }
+
+    .card .card-back {
+      background: linear-gradient(135deg, #7b2ff7, #5a1fb3);
+      transform: rotateY(0deg);
+      background-size: cover;
+      background-position: center;
+    }
+
+    .card .card-front {
+      background: #1a1a2e;
+      border: 2px solid #333;
+      transform: rotateY(180deg);
+      font-size: 2.2rem;
+      overflow: hidden;
+    }
+
+    .card .card-front img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card .card-back img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .card.flipped .card-inner { transform: rotateY(180deg); }
+
+    .card.matched .card-front {
+      border-color: #00c853;
+      background: #1b3a1b;
+    }
+
+    .card.matched { cursor: default; }
+
+    #memory-complete {
+      display: none;
+      text-align: center;
+      padding: 30px;
+      background: #1a1a2e;
+      border-radius: 16px;
+      margin-bottom: 20px;
+    }
+
+    #memory-complete h2 {
+      font-size: 2rem;
+      background: linear-gradient(135deg, #00d4ff, #7b2ff7);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    #memory-complete .stats { font-size: 1.2rem; color: #aaa; margin-bottom: 16px; }
+    #memory-complete .stats span { color: #00d4ff; font-weight: 700; }
+
+    .btn-start-memory {
+      padding: 12px 30px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #00d4ff, #0090b3);
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* LEADERBOARD */
+    .stats-bar { display: flex; gap: 16px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
+
+    .stat-card {
+      background: #1a1a2e;
+      padding: 14px 24px;
+      border-radius: 10px;
+      text-align: center;
+    }
+
+    .stat-card .label { font-size: 0.8rem; color: #888; text-transform: uppercase; }
+    .stat-card .value { font-size: 1.4rem; font-weight: 700; color: #00d4ff; margin-top: 4px; }
+
+    .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; justify-content: center; align-items: center; }
+    .filter-bar label { color: #888; font-size: 0.9rem; }
+
+    .filter-bar select {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: 1px solid #444;
+      background: #1a1a2e;
+      color: #e0e0e0;
+      font-size: 0.95rem;
+    }
+
+    table { width: 100%; border-collapse: collapse; background: #1a1a2e; border-radius: 12px; overflow: hidden; }
+
+    th, td { padding: 12px 16px; text-align: left; }
+
+    th {
+      background: #252540;
+      color: #00d4ff;
+      font-weight: 600;
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td { border-top: 1px solid #2a2a40; font-size: 0.95rem; }
+    tr:hover td { background: #22223a; }
+
+    .rank-1 td { color: #ffd700; }
+    .rank-2 td { color: #c0c0c0; }
+    .rank-3 td { color: #cd7f32; }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #666; font-size: 1.1rem; }
+
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: #333;
+      color: #fff;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 100;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Operations Team Games</h1>
+    <p>Play games, compete with your team, collect scores!</p>
+  </header>
+
+  <nav>
+    <button class="btn-home" onclick="showScreen('home')">Home</button>
+    <button class="btn-play" onclick="showScreen('reaction')">Reaction Time</button>
+    <button class="btn-play" onclick="showScreen('memory')">Incompliance Match</button>
+    <button class="btn-leaderboard" onclick="showScreen('leaderboard')">Leaderboard</button>
+    <button class="btn-export" onclick="exportToExcel()">Export to Excel</button>
+    <button class="btn-submit" onclick="submitMyScore()">Submit My Score</button>
+  </nav>
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div class="game-cards">
+      <div class="game-card" onclick="showScreen('reaction')">
+        <div class="icon">⚡</div>
+        <h3>Reaction Time</h3>
+        <p>Click as fast as you can when the screen turns green. Tests your reflexes!</p>
+      </div>
+      <div class="game-card" onclick="showScreen('memory')">
+        <div class="icon">🧠</div>
+        <h3>Incompliance Match</h3>
+        <p>Find all matching pairs in the fewest moves and fastest time!</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- REACTION TIME GAME -->
+  <div id="screen-reaction" class="screen">
+    <div class="input-group">
+      <input type="text" id="player-name-reaction" placeholder="Enter your name" maxlength="30" />
+    </div>
+    <div id="reaction-area" class="waiting" onclick="handleReactionClick()">
+      <h2 id="reaction-msg">Click to Start</h2>
+      <p id="reaction-sub">Wait for the green screen, then click as fast as you can!</p>
+    </div>
+  </div>
+
+  <!-- MEMORY MATCH GAME -->
+  <div id="screen-memory" class="screen">
+    <div class="input-group">
+      <input type="text" id="player-name-memory" placeholder="Enter your name" maxlength="30" />
+    </div>
+    <div id="memory-info">
+      <div class="info-badge">Moves: <span id="move-count">0</span></div>
+      <div class="info-badge">Pairs: <span id="pair-count">0</span> / 8</div>
+      <div class="info-badge">Time: <span id="memory-timer">0.0s</span></div>
+    </div>
+    <div id="memory-grid"></div>
+    <div id="memory-complete">
+      <h2>Complete!</h2>
+      <div class="stats">
+        Time: <span id="final-time">0</span>s &nbsp;|&nbsp; Moves: <span id="final-moves">0</span>
+      </div>
+      <button class="btn-start-memory" onclick="startMemoryGame()">Play Again</button>
+    </div>
+    <div style="text-align:center;">
+      <button class="btn-start-memory" id="btn-start-memory" onclick="startMemoryGame()">Start Game</button>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div id="screen-leaderboard" class="screen">
+    <div class="stats-bar" id="stats-bar"></div>
+    <div class="filter-bar">
+      <label>Filter by game:</label>
+      <select id="game-filter" onchange="renderLeaderboard()">
+        <option value="all">All Games</option>
+        <option value="Reaction Time">Reaction Time</option>
+        <option value="Incompliance Match">Incompliance Match</option>
+      </select>
+    </div>
+    <div id="leaderboard-content"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let scores = JSON.parse(localStorage.getItem('gameScores') || '[]');
+
+    // ==================== NAVIGATION ====================
+    function showScreen(name) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + name).classList.add('active');
+      if (name === 'leaderboard') renderLeaderboard();
+      if (name === 'memory') resetMemoryUI();
+    }
+
+    // ==================== REACTION TIME GAME ====================
+    let reactionState = 'idle';
+    let reactionStart = 0;
+    let readyTimeout = null;
+
+    const reactionArea = document.getElementById('reaction-area');
+    const reactionMsg = document.getElementById('reaction-msg');
+    const reactionSub = document.getElementById('reaction-sub');
+
+    function handleReactionClick() {
+      if (reactionState === 'idle' || reactionState === 'result') {
+        startReactionRound();
+      } else if (reactionState === 'ready') {
+        reactionTooEarly();
+      } else if (reactionState === 'go') {
+        recordReactionTime();
+      }
+    }
+
+    function startReactionRound() {
+      const name = document.getElementById('player-name-reaction').value.trim();
+      if (!name) {
+        showToast('Please enter your name first!');
+        document.getElementById('player-name-reaction').focus();
+        return;
+      }
+
+      reactionState = 'waiting';
+      reactionArea.className = 'waiting';
+      reactionMsg.textContent = 'Get Ready...';
+      reactionSub.textContent = 'Wait for the green screen...';
+
+      readyTimeout = setTimeout(() => {
+        reactionState = 'go';
+        reactionArea.className = 'go';
+        reactionMsg.textContent = 'CLICK NOW!';
+        reactionSub.textContent = '';
+        reactionStart = performance.now();
+      }, 1500 + Math.random() * 3000);
+
+      reactionState = 'ready';
+      reactionArea.className = 'ready';
+      reactionMsg.textContent = 'Wait for green...';
+      reactionSub.textContent = 'Don\'t click yet!';
+    }
+
+    function reactionTooEarly() {
+      clearTimeout(readyTimeout);
+      reactionState = 'result';
+      reactionArea.className = 'result';
+      reactionMsg.textContent = 'Too Early!';
+      reactionSub.textContent = 'Click to try again.';
+    }
+
+    function recordReactionTime() {
+      const elapsed = Math.round(performance.now() - reactionStart);
+      const name = document.getElementById('player-name-reaction').value.trim();
+
+      scores.push({
+        name: name,
+        game: 'Reaction Time',
+        score: elapsed,
+        scoreLabel: elapsed + ' ms',
+        details: { time_ms: elapsed },
+        date: new Date().toLocaleString()
+      });
+      saveScores();
+
+      reactionState = 'result';
+      reactionArea.className = 'result';
+      reactionMsg.innerHTML = '<span id="result-time">' + elapsed + ' ms</span>';
+
+      let rating = '';
+      if (elapsed < 200) rating = 'Incredible!';
+      else if (elapsed < 250) rating = 'Excellent!';
+      else if (elapsed < 300) rating = 'Great!';
+      else if (elapsed < 350) rating = 'Good';
+      else if (elapsed < 400) rating = 'Average';
+      else rating = 'Keep practicing!';
+
+      reactionSub.textContent = rating + ' — Click to play again.';
+      showToast('Score saved: ' + elapsed + ' ms');
+    }
+
+    // ==================== MEMORY MATCH GAME ====================
+    const EMOJIS = ['🍎', '🍊', '🍋', '🍇', '🍓', '🍒', '🥝', '🍑'];
+    const IMAGES_DIR = 'game-images/';
+    const NUM_PAIRS = 8;
+    let customImages = null;
+    let customBackImage = null;
+
+    function preloadImages() {
+      return new Promise((resolve) => {
+        const imgs = [];
+        let loaded = 0;
+        let failed = 0;
+
+        for (let i = 1; i <= NUM_PAIRS; i++) {
+          const img = new Image();
+          img.onload = () => { loaded++; imgs[i] = img.src; if (loaded + failed === NUM_PAIRS) finalize(); };
+          img.onerror = () => { failed++; if (loaded + failed === NUM_PAIRS) finalize(); };
+          img.src = IMAGES_DIR + 'card ' + i + '-png.png';
+        }
+
+        function finalize() {
+          if (loaded === NUM_PAIRS) {
+            customImages = [];
+            for (let i = 1; i <= NUM_PAIRS; i++) customImages.push(imgs[i]);
+          } else {
+            customImages = null;
+          }
+
+          const backImg = new Image();
+          backImg.onload = () => { customBackImage = backImg.src; resolve(); };
+          backImg.onerror = () => { customBackImage = null; resolve(); };
+          backImg.src = IMAGES_DIR + 'back.png';
+        }
+      });
+    }
+
+    let memoryCards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let moves = 0;
+    let memoryTimerInterval = null;
+    let memoryStartTime = 0;
+    let memoryLocked = false;
+
+    function resetMemoryUI() {
+      document.getElementById('memory-grid').innerHTML = '';
+      document.getElementById('memory-complete').style.display = 'none';
+      document.getElementById('btn-start-memory').style.display = 'inline-block';
+      document.getElementById('move-count').textContent = '0';
+      document.getElementById('pair-count').textContent = '0';
+      document.getElementById('memory-timer').textContent = '0.0s';
+      clearInterval(memoryTimerInterval);
+      memoryLocked = false;
+    }
+
+    async function startMemoryGame() {
+      const name = document.getElementById('player-name-memory').value.trim();
+      if (!name) {
+        showToast('Please enter your name first!');
+        document.getElementById('player-name-memory').focus();
+        return;
+      }
+
+      document.getElementById('memory-complete').style.display = 'none';
+      document.getElementById('btn-start-memory').style.display = 'none';
+
+      await preloadImages();
+
+      const useImages = customImages !== null;
+      const symbols = useImages ? customImages : EMOJIS;
+      const pairs = [...symbols, ...symbols];
+      memoryCards = pairs.sort(() => Math.random() - 0.5);
+      flippedCards = [];
+      matchedPairs = 0;
+      moves = 0;
+      memoryLocked = false;
+
+      document.getElementById('move-count').textContent = '0';
+      document.getElementById('pair-count').textContent = '0';
+      document.getElementById('memory-timer').textContent = '0.0s';
+
+      const grid = document.getElementById('memory-grid');
+      grid.innerHTML = '';
+      memoryCards.forEach((symbol, i) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.index = i;
+        card.dataset.value = symbol;
+
+        const backContent = customBackImage
+          ? '<img src="' + customBackImage + '" alt="">'
+          : '';
+        const frontContent = useImages
+          ? '<img src="' + symbol + '" alt="">'
+          : symbol;
+
+        card.innerHTML =
+          '<div class="card-inner">' +
+            '<div class="card-back">' + backContent + '</div>' +
+            '<div class="card-front">' + frontContent + '</div>' +
+          '</div>';
+        card.addEventListener('click', () => flipCard(card));
+        grid.appendChild(card);
+      });
+
+      clearInterval(memoryTimerInterval);
+      memoryStartTime = performance.now();
+      memoryTimerInterval = setInterval(() => {
+        const elapsed = ((performance.now() - memoryStartTime) / 1000).toFixed(1);
+        document.getElementById('memory-timer').textContent = elapsed + 's';
+      }, 100);
+    }
+
+    function flipCard(card) {
+      if (memoryLocked) return;
+      if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
+      if (flippedCards.length >= 2) return;
+
+      card.classList.add('flipped');
+      flippedCards.push(card);
+
+      if (flippedCards.length === 2) {
+        moves++;
+        document.getElementById('move-count').textContent = moves;
+        checkMatch();
+      }
+    }
+
+    function checkMatch() {
+      const [c1, c2] = flippedCards;
+      if (c1.dataset.value === c2.dataset.value) {
+        c1.classList.add('matched');
+        c2.classList.add('matched');
+        matchedPairs++;
+        document.getElementById('pair-count').textContent = matchedPairs;
+        flippedCards = [];
+        if (matchedPairs === 8) completeMemoryGame();
+      } else {
+        memoryLocked = true;
+        setTimeout(() => {
+          c1.classList.remove('flipped');
+          c2.classList.remove('flipped');
+          flippedCards = [];
+          memoryLocked = false;
+        }, 800);
+      }
+    }
+
+    function completeMemoryGame() {
+      clearInterval(memoryTimerInterval);
+      const elapsedSec = ((performance.now() - memoryStartTime) / 1000).toFixed(1);
+      const elapsedMs = Math.round(elapsedSec * 1000);
+      const name = document.getElementById('player-name-memory').value.trim();
+
+      document.getElementById('final-time').textContent = elapsedSec;
+      document.getElementById('final-moves').textContent = moves;
+      document.getElementById('memory-complete').style.display = 'block';
+
+      scores.push({
+        name: name,
+        game: 'Incompliance Match',
+        score: elapsedMs,
+        scoreLabel: elapsedSec + 's / ' + moves + ' moves',
+        details: { time_ms: elapsedMs, moves: moves },
+        date: new Date().toLocaleString()
+      });
+      saveScores();
+      showToast('Score saved: ' + elapsedSec + 's with ' + moves + ' moves');
+    }
+
+    // ==================== SHARED ====================
+    function saveScores() {
+      const best = {};
+      scores.forEach(s => {
+        const key = s.name.toLowerCase() + '|' + s.game;
+        if (!best[key] || s.score < best[key].score) {
+          best[key] = s;
+        }
+      });
+      scores = Object.values(best).sort((a, b) => a.score - b.score);
+      localStorage.setItem('gameScores', JSON.stringify(scores));
+    }
+
+    function renderLeaderboard() {
+      const content = document.getElementById('leaderboard-content');
+      const statsBar = document.getElementById('stats-bar');
+      const filter = document.getElementById('game-filter').value;
+
+      const filtered = filter === 'all' ? scores : scores.filter(s => s.game === filter);
+
+      if (filtered.length === 0) {
+        statsBar.innerHTML = '';
+        content.innerHTML = '<div class="empty-state">No scores yet. Play a game!</div>';
+        return;
+      }
+
+      const best = filtered[0].score;
+      const avg = Math.round(filtered.reduce((s, r) => s + r.score, 0) / filtered.length);
+      const total = filtered.length;
+      const players = new Set(filtered.map(s => s.name)).size;
+
+      statsBar.innerHTML =
+        '<div class="stat-card"><div class="label">Best</div><div class="value">' + formatScore(best, filtered[0].game) + '</div></div>' +
+        '<div class="stat-card"><div class="label">Average</div><div class="value">' + formatScore(avg, filter) + '</div></div>' +
+        '<div class="stat-card"><div class="label">Rounds</div><div class="value">' + total + '</div></div>' +
+        '<div class="stat-card"><div class="label">Players</div><div class="value">' + players + '</div></div>';
+
+      const top = filtered.slice(0, 30);
+      let html = '<table><thead><tr><th>#</th><th>Name</th><th>Game</th><th>Score</th><th>Date</th></tr></thead><tbody>';
+      top.forEach((s, i) => {
+        const cls = i < 3 ? ' class="rank-' + (i + 1) + '"' : '';
+        html += '<tr' + cls + '><td>' + (i + 1) + '</td><td>' + escapeHtml(s.name) + '</td><td>' + s.game + '</td><td>' + s.scoreLabel + '</td><td>' + s.date + '</td></tr>';
+      });
+      html += '</tbody></table>';
+      content.innerHTML = html;
+    }
+
+    function formatScore(scoreMs, game) {
+      if (game === 'Incompliance Match') return (scoreMs / 1000).toFixed(1) + 's';
+      if (game === 'Reaction Time') return scoreMs + ' ms';
+      return scoreMs + ' ms';
+    }
+
+    function exportToExcel() {
+      if (scores.length === 0) {
+        showToast('No scores to export!');
+        return;
+      }
+
+      const data = scores.map((s, i) => ({
+        'Rank': i + 1,
+        'Player Name': s.name,
+        'Game': s.game,
+        'Score': s.scoreLabel,
+        'Score (ms)': s.score,
+        'Details': JSON.stringify(s.details || {}),
+        'Date': s.date
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{ wch: 6 }, { wch: 22 }, { wch: 16 }, { wch: 22 }, { wch: 12 }, { wch: 30 }, { wch: 22 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Game Scores');
+
+      const summaryData = [];
+      const games = [...new Set(scores.map(s => s.game))];
+      games.forEach(g => {
+        const gameScores = scores.filter(s => s.game === g);
+        summaryData.push({
+          'Game': g,
+          'Total Rounds': gameScores.length,
+          'Best Score': gameScores[0].scoreLabel,
+          'Average Score (ms)': Math.round(gameScores.reduce((s, r) => s + r.score, 0) / gameScores.length),
+          'Players': new Set(gameScores.map(s => s.name)).size
+        });
+      });
+
+      const ws2 = XLSX.utils.json_to_sheet(summaryData);
+      ws2['!cols'] = [{ wch: 16 }, { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 10 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+
+      XLSX.writeFile(wb, 'team_game_scores.xlsx');
+      showToast('Excel file downloaded!');
+    }
+
+    function submitMyScore() {
+      const nameReaction = document.getElementById('player-name-reaction').value.trim();
+      const nameMemory = document.getElementById('player-name-memory').value.trim();
+      const name = nameReaction || nameMemory;
+
+      if (!name) {
+        showToast('Please enter your name in any game first!');
+        return;
+      }
+
+      const playerScores = scores.filter(s => s.name.toLowerCase() === name.toLowerCase());
+
+      if (playerScores.length === 0) {
+        showToast('No scores found for ' + name + '. Play a game first!');
+        return;
+      }
+
+      const data = playerScores.map(s => ({
+        'Player Name': s.name,
+        'Game': s.game,
+        'Score': s.scoreLabel,
+        'Score (ms)': s.score,
+        'Date': s.date
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      ws['!cols'] = [{ wch: 22 }, { wch: 20 }, { wch: 22 }, { wch: 12 }, { wch: 22 }];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'My Scores');
+
+      const safeName = name.replace(/[^a-zA-Z0-9]/g, '_');
+      XLSX.writeFile(wb, 'score_' + safeName + '.xlsx');
+      showToast('Score submitted for ' + name + '!');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 2500);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>
