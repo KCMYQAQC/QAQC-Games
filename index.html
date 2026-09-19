@@ -457,19 +457,48 @@
         return;
       }
 
-      emailScore({
-        'Player Name': lastScore.name,
-        'Game': lastScore.game,
-        'Time': lastScore.time,
-        'Moves': lastScore.moves,
-        'Score': lastScore.scoreLabel,
-        'Date': lastScore.date
-      }, 'Incompliance Match Score - ' + lastScore.name + ' (' + lastScore.scoreLabel + ')');
-
       const btn = document.getElementById('btn-submit-score');
-      btn.textContent = 'SENT!';
-      btn.style.background = 'linear-gradient(135deg, #69f0ae, #00c853)';
-      showToast('Score submitted for ' + lastScore.name + '!');
+      const originalText = btn.textContent;
+      btn.textContent = 'SENDING...';
+      btn.style.background = 'linear-gradient(135deg, #ffb300, #ffd700)';
+      btn.disabled = true;
+
+      const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz5OjdneRrMqO43s-JUD_nQgLrKTS-4BUmpZr5lnvrCcdFVHtN_g4J4ewE96gqoFjhV2A/exec';
+
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerName: lastScore.name,
+          game: lastScore.game,
+          date: lastScore.date,
+          score: lastScore.scoreLabel,
+          time: lastScore.time,
+          moves: lastScore.moves
+        })
+      })
+      .then(() => {
+        btn.textContent = 'SENT!';
+        btn.style.background = 'linear-gradient(135deg, #69f0ae, #00c853)';
+        showToast('Score submitted for ' + lastScore.name + '!');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 3000);
+      })
+      .catch(err => {
+        console.error('Submit error:', err);
+        btn.textContent = 'FAILED - TRY AGAIN';
+        btn.style.background = 'linear-gradient(135deg, #ff5252, #c62828)';
+        showToast('Failed to submit score. Please try again.');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+          btn.disabled = false;
+        }, 3000);
+      });
     }
 
     function showToast(msg) {
